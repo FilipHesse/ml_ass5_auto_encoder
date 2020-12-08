@@ -11,6 +11,9 @@ from tensorflow.keras.models import Sequential
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.utils import to_categorical
 
+from tensorflow import keras
+from tensorflow.keras import layers
+
 from tf_utils.callbacks import ConfusionMatrix
 
 
@@ -57,18 +60,31 @@ def prepare_dataset_autoencoder(num_features: int, class0: int, class1:int ) -> 
     return (x_train, y_train), (x_test, y_test)
 
 
-def build_model(num_features: int, num_classes: int) -> Sequential:
-    init_w = TruncatedNormal(mean=0.0, stddev=0.01)
-    init_b = Constant(value=0.0)
+def build_models(num_features: int, num_classes: int) -> Sequential:
+    encoding_dim = 2
 
-    model = Sequential()
-    model.add(Dense(units=2, kernel_initializer=init_w, bias_initializer=init_b, input_shape=(num_features,),))
-    model.add(Activation("relu"))
-    model.add(Dense(units=num_classes, kernel_initializer=init_w, bias_initializer=init_b))
-    model.add(Activation("sigmoid"))
-    model.summary()
+    # This is our input image
+    input_img = keras.Input(shape=(num_features,))
+    # "encoded" is the encoded representation of the input
+    encoded = layers.Dense(encoding_dim, activation='relu')(input_img)
+    # "decoded" is the lossy reconstruction of the input
+    decoded = layers.Dense(num_classes, activation='sigmoid')(encoded)
 
-    return model
+    # This model maps an input to its reconstruction
+    autoencoder = keras.Model(input_img, decoded)
+
+    # This model maps an input to its encoded representation
+    encoder = keras.Model(input_img, encoded)
+
+    # This is our encoded (32-dimensional) input
+    encoded_input = keras.Input(shape=(encoding_dim,))
+    # Retrieve the last layer of the autoencoder model
+    decoder_layer = autoencoder.layers[-1]
+    # Create the decoder model
+    decoder = keras.Model(encoded_input, decoder_layer(encoded_input))
+
+
+    return autoencoder, encoder, decoder
 
 
 if __name__ == "__main__":
@@ -77,13 +93,13 @@ if __name__ == "__main__":
 
     (x_train, y_train), (x_test, y_test) = prepare_dataset_autoencoder(num_features, class0=2, class1=3)
 
-    optimizer = Adam(learning_rate=0.001)
-    epochs = 10
+    optimizer = Adam()
+    epochs = 100
     batch_size = 256
 
-    model = build_model(num_features, num_classes)
+    autoencoder, encoder, decoder = build_models(num_features, num_classes)
 
-    model.compile(
+    autoencoder.compile(
         loss="binary_crossentropy",
         optimizer=optimizer,
         metrics=["accuracy"]
@@ -97,7 +113,7 @@ if __name__ == "__main__":
 
     classes_list = [class_idx for class_idx in range(num_classes)]
 
-    model.fit(
+    autoencoder.fit(
         x=x_train,
         y=x_train,
         epochs=epochs,
@@ -106,7 +122,7 @@ if __name__ == "__main__":
         callbacks=[tb_callback],
     )
 
-    scores = model.evaluate(
+    scores = autoencoder.evaluate(
         x=x_test,
         y=x_test,
         verbose=0
