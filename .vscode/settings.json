@@ -1,0 +1,7 @@
+{
+    "python.autoComplete.extraPaths": [
+        "/home/filip/Coding/exp-lab-ass2/catkin_ws/devel/lib/python3/dist-packages",
+        "/opt/ros/noetic/lib/python3/dist-packages"
+    ],
+    "python.pythonPath": "/home/filip/anaconda3/envs/tensorflow/bin/python"
+}

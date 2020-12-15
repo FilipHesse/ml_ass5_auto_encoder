@@ -1,6 +1,7 @@
 import os
 
 import numpy as np
+import matplotlib.pyplot as plt
 from tensorflow.keras.callbacks import TensorBoard
 from tensorflow.keras.datasets import mnist
 from tensorflow.keras.initializers import Constant
@@ -83,18 +84,81 @@ def build_models(num_features: int, num_classes: int) -> Sequential:
     # Create the decoder model
     decoder = keras.Model(encoded_input, decoder_layer(encoded_input))
 
-
     return autoencoder, encoder, decoder
+
+def legend_without_duplicate_labels(ax):
+    handles, labels = ax.get_legend_handles_labels()
+    unique = [(h, l) for i, (h, l) in enumerate(zip(handles, labels)) if l not in labels[:i]]
+    ax.legend(*zip(*unique))
+
+def plot_encoded(encoded_imgs, y_test, class0, class1):
+    fig, ax = plt.subplots()
+    for i, img in enumerate(encoded_imgs):
+        marker = ''
+        if y_test[i] == 0:
+            marker = 'r+'
+            label_str = f"digit {class0}"
+        if y_test[i] == 1:
+            marker = 'b+'
+            label_str = f"digit {class1}"
+        ax.plot(img[0], img[1], marker, label = label_str)
+    legend_without_duplicate_labels(ax)
+    plt.xlabel('a_0')
+    plt.ylabel('a_1')
+    plt.title(f'Output of hidden layer: {class0} vs {class1}')
+    plt.savefig(f'logs/encoded_{class0}_vs_{class1}.png')
+    
+
+def plot_decoded(decoded_imgs, class0, class1):
+    n = 5 
+    perm = np.random.permutation(np.shape(decoded_imgs)[0])
+    plt.figure(figsize=(20, 4))
+    for i in range(n):
+        # Display original
+        ax = plt.subplot(2, n, i + 1)
+        plt.imshow(x_test[perm[i]].reshape(28, 28))
+        plt.gray()
+        ax.get_xaxis().set_visible(False)
+        ax.get_yaxis().set_visible(False)
+
+        # Display reconstruction
+        ax = plt.subplot(2, n, i + 1 + n)
+        plt.imshow(decoded_imgs[perm[i]].reshape(28, 28))
+        plt.gray()
+        ax.get_xaxis().set_visible(False)
+        ax.get_yaxis().set_visible(False)
+    plt.savefig(f'logs/decoded_{class0}_vs_{class1}_subs1.png')
+
+    #Plot other subset
+    plt.figure(figsize=(20, 4))
+    for i in range(n):
+        # Display original
+        ax = plt.subplot(2, n, i + 1)
+        plt.imshow(x_test[perm[i+n]].reshape(28, 28))
+        plt.gray()
+        ax.get_xaxis().set_visible(False)
+        ax.get_yaxis().set_visible(False)
+
+        # Display reconstruction
+        ax = plt.subplot(2, n, i + 1 + n)
+        plt.imshow(decoded_imgs[perm[i]+n].reshape(28, 28))
+        plt.gray()
+        ax.get_xaxis().set_visible(False)
+        ax.get_yaxis().set_visible(False)
+    plt.savefig(f'logs/decoded_{class0}_vs_{class1}_subs2.png')
 
 
 if __name__ == "__main__":
     num_features = 784
     num_classes = 784
+    class0 = 0
+    class1 = 1
 
-    (x_train, y_train), (x_test, y_test) = prepare_dataset_autoencoder(num_features, class0=2, class1=3)
+    (x_train, y_train), (x_test, y_test) = prepare_dataset_autoencoder(
+        num_features, class0, class1)
 
     optimizer = Adam()
-    epochs = 100
+    epochs = 30
     batch_size = 256
 
     autoencoder, encoder, decoder = build_models(num_features, num_classes)
@@ -111,8 +175,6 @@ if __name__ == "__main__":
         write_graph=True
     )
 
-    classes_list = [class_idx for class_idx in range(num_classes)]
-
     autoencoder.fit(
         x=x_train,
         y=x_train,
@@ -128,3 +190,13 @@ if __name__ == "__main__":
         verbose=0
     )
     print("Scores: ", scores)
+
+    # Encode and decode some digits
+    # Note that we take them from the *test* set
+    encoded_imgs = encoder.predict(x_test)
+    decoded_imgs = decoder.predict(encoded_imgs)
+
+    plot_encoded(encoded_imgs, y_test, class0, class1)
+
+    plot_decoded(decoded_imgs, class0, class1)
+
