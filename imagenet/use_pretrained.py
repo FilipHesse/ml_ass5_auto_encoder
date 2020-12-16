@@ -57,16 +57,17 @@ def classify_image(image_path):
     (imagenetID, label, prob) = P[0][0]
     cv2.putText(orig, "Label: {}, {:.2f}%".format(label, prob * 100),
                 (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
-    cv2.imshow("Classification", orig)
-    cv2.waitKey(0)
+    #cv2.imshow("Classification", orig)
+    cv2.imwrite(f"output/use_pretrained/{os.path.basename(image_path)}", orig)
+    #cv2.waitKey(0)
 
 if __name__ == '__main__':
     import os
     os.environ['CUDA_VISIBLE_DEVICES'] = "0"
 
     path_to_images = os.path.join(os.path.dirname(__file__),"test_images")
-    #images = ["bottle1.jpg","bottle2.jpg", "pen.jpg", "phone.jpg", "shoe.jpg","apple.jpg", "beerbottle.jpg", "winebottle.jpg", "broccoli.jpg","mouse.jpg"]
-    images = ["mouse.jpg"]
+    images = ["bottle1.jpg","bottle2.jpg", "pen.jpg", "phone.jpg", "shoe.jpg","apple.jpg", "beerbottle.jpg", "winebottle.jpg", "broccoli.jpg","mouse.jpg"]
+    #images = ["mouse.jpg"]
     for im in images:
         image_fullpath = os.path.join(path_to_images, im)
         classify_image(image_fullpath)
