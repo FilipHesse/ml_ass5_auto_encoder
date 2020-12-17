@@ -1,3 +1,4 @@
+#%%
 from tensorflow.keras.applications import MobileNetV2
 from tensorflow.keras.callbacks import EarlyStopping
 from tensorflow.keras.callbacks import LearningRateScheduler
@@ -13,8 +14,7 @@ from tensorflow.keras.optimizers import Adam
 import os
 import matplotlib.pyplot as plt
 
-from tf_utils.callbacks import schedule_fn2
-from tf_utils.cifarDataAdvanced import CIFAR10
+from cifarData import CIFAR10
 
 MODEL_DIR = os.path.join(os.path.dirname(__file__),"models")
 if not os.path.exists(MODEL_DIR):
@@ -58,16 +58,11 @@ def build_model(img_shape, num_classes) -> Model:
 
 
 if __name__ == "__main__":
-    """
-    Best model from chapter 8:   0.7200 accuracy
-    Best model from chapter 9_3: 0.8361 accuracy
-    Best model from chapter 9_7: 0.8993 accuracy
-    """
     data = CIFAR10()
 
-    train_dataset = data.get_train_set()
-    val_dataset = data.get_val_set()
-    test_dataset = data.get_test_set()
+    (train_x, train_y) = data.get_train_set()
+    (val_x, val_y) = data.get_val_set()
+    (test_x, test_y) = data.get_test_set()
 
     img_shape = data.img_shape
     num_classes = data.num_classes
@@ -89,11 +84,6 @@ if __name__ == "__main__":
         metrics=["accuracy"]
     )
 
-    lrs_callback = LearningRateScheduler(
-        schedule=schedule_fn2,
-        verbose=1
-    )
-
     es_callback = EarlyStopping(
         monitor="val_loss",
         patience=30,
@@ -101,31 +91,43 @@ if __name__ == "__main__":
         restore_best_weights=True
     )
 
-    # model.fit(
-    #     train_dataset,
-    #     verbose=1,
-    #     epochs=epochs,
-    #     callbacks=[lrs_callback, es_callback],
-    #     validation_data=val_dataset,
-    # )
-    # model.save_weights(filepath=MODEL_FILE_PATH)
-    
-    scores = model.evaluate(
-        val_dataset,
-        verbose=0
+    model.fit(
+        train_x,
+        train_y,
+        verbose=1,
+        epochs=epochs,
+        callbacks=[es_callback],
+        validation_data=(val_x, val_y),
+        batch_size=128
     )
+    model.save_weights(filepath=MODEL_FILE_PATH)
+    
+
 
     
     model.load_weights(filepath=MODEL_FILE_PATH)
 
-    for i, im in enumerate(test_dataset):
-        if i > 5 :
-            break
-        
-        plt.imshow(im[0][i])
-        plt.show()
-        prediction = model.predict(im[0])
-        print(prediction)
-        
+    scores = model.evaluate(
+    val_x,
+    val_y,
+    verbose=0
+    )
 
     print(f"Scores: {scores}")
+
+    nr_output_predictions = 6
+    preds = model.predict(test_x[:nr_output_predictions])
+    for i, pred in enumerate(preds):
+        if i > nr_output_predictions :
+            break
+        pred_label, pred_probability = data.decode_labels(pred)
+        y_label, y_probability = data.decode_labels(test_y[i])
+        #plt.imshow(test_x[i])
+        plt.imsave(f"output/transfer_learning/{i}_{pred_label}.jpg", test_x[i])
+        
+        print(f"Predicted class: {pred_label} ({pred_probability*100}%), Actual class: {y_label}")
+        
+
+
+
+# %%
