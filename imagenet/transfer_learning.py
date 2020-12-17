@@ -11,6 +11,7 @@ from tensorflow.keras.models import Model
 from tensorflow.keras.optimizers import Adam
 
 import os
+import matplotlib.pyplot as plt
 
 from tf_utils.callbacks import schedule_fn2
 from tf_utils.cifarDataAdvanced import CIFAR10
@@ -71,6 +72,7 @@ if __name__ == "__main__":
     img_shape = data.img_shape
     num_classes = data.num_classes
 
+
     # Global params
     epochs = 100
 
@@ -99,19 +101,31 @@ if __name__ == "__main__":
         restore_best_weights=True
     )
 
-    model.fit(
-        train_dataset,
-        verbose=1,
-        epochs=epochs,
-        callbacks=[lrs_callback, es_callback],
-        validation_data=val_dataset,
-    )
-
+    # model.fit(
+    #     train_dataset,
+    #     verbose=1,
+    #     epochs=epochs,
+    #     callbacks=[lrs_callback, es_callback],
+    #     validation_data=val_dataset,
+    # )
+    # model.save_weights(filepath=MODEL_FILE_PATH)
+    
     scores = model.evaluate(
         val_dataset,
         verbose=0
     )
 
-    model.save_weights(filepath=MODEL_FILE_PATH)
+    
     model.load_weights(filepath=MODEL_FILE_PATH)
+
+    for i, im in enumerate(test_dataset):
+        if i > 5 :
+            break
+        
+        plt.imshow(im[0][i])
+        plt.show()
+        prediction = model.predict(im[0])
+        print(prediction)
+        
+
     print(f"Scores: {scores}")
