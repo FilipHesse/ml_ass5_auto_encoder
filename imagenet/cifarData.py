@@ -6,30 +6,31 @@ from sklearn.model_selection import train_test_split
 from tensorflow.keras.datasets import cifar10
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from tensorflow.keras.utils import to_categorical
-
+from tensorflow.image import resize
 
 np.random.seed(0)
 tf.random.set_seed(0)
 
+IMAGENET_SHAPE = [96, 96]
+
 
 class CIFAR10:
-    def __init__(self, with_normalization: bool = True, validation_size: float = 0.33) -> None:
+    def __init__(self, validation_size: float = 0.33) -> None:
         # User-definen constants
         self.num_classes = 10
         # Load the data set
         (x_train, y_train), (x_test, y_test) = cifar10.load_data()
-        # Split the dataset
-        x_train, x_val, y_train, y_val = train_test_split(x_train, y_train, test_size=validation_size)
+        # Split the dataset, only consider 10000 values
+        x_train, x_val, y_train, y_val = train_test_split(x_train[:10000], y_train[:10000], test_size=validation_size)
         # Preprocess x data
         self.x_train = x_train.astype(np.float32)
         self.x_test = x_test.astype(np.float32)
         self.x_val = x_val.astype(np.float32)
-        if with_normalization:
-            self.x_train = self.x_train / 255.0
-        if with_normalization:
-            self.x_test = self.x_test / 255.0
-        if with_normalization:
-            self.x_val = self.x_val / 255.0
+
+        #Preprocessing for MobileNet: normalize and move to range [-1, 1], resize to 96x96
+        self.x_train = (self.x_train / 255.0)*2-1
+        self.x_test = (self.x_test / 255.0)*2-1
+        self.x_val = (self.x_val / 255.0)*2-1
         # Preprocess y data
         self.y_train = to_categorical(y_train, num_classes=self.num_classes)
         self.y_test = to_categorical(y_test, num_classes=self.num_classes)
